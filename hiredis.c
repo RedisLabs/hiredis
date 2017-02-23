@@ -589,7 +589,7 @@ redisReader *redisReaderCreate(void) {
     return redisReaderCreateWithFunctions(&defaultFunctions);
 }
 
-static redisContext *redisContextInit(void) {
+redisContext *redisContextInit(void) {
     redisContext *c;
 
     c = calloc(1,sizeof(redisContext));
@@ -616,6 +616,10 @@ static redisContext *redisContextInit(void) {
 void redisFree(redisContext *c) {
     if (c == NULL)
         return;
+    if (c->free_cb) {
+        c->free_cb(c);
+        return;
+    }
     if (c->fd > 0)
         close(c->fd);
     if (c->obuf != NULL)
@@ -786,6 +790,20 @@ int redisEnableKeepAlive(redisContext *c) {
     return REDIS_OK;
 }
 
+static inline ssize_t genericWrite(redisContext *c, void *buf, int len) {
+    if (c->write_cb) {
+        return c->write_cb(c, buf, len);
+    }
+    return write(c->fd, buf,len);
+}
+
+static inline ssize_t genericRead(redisContext *c, void *buf, int len) {
+    if (c->read_cb) {
+        return c->read_cb(c, buf, len);
+    }
+    return read(c->fd, buf,len);
+}
+
 /* Use this function to handle a read event on the descriptor. It will try
  * and read some bytes from the socket and feed them to the reply parser.
  *
@@ -799,7 +817,7 @@ int redisBufferRead(redisContext *c) {
     if (c->err)
         return REDIS_ERR;
 
-    nread = read(c->fd,buf,sizeof(buf));
+    nread = genericRead(c,buf,sizeof(buf));
     if (nread == -1) {
         if ((errno == EAGAIN && !(c->flags & REDIS_BLOCK)) || (errno == EINTR)) {
             /* Try again later */
@@ -836,7 +854,7 @@ int redisBufferWrite(redisContext *c, int *done) {
         return REDIS_ERR;
 
     if (sdslen(c->obuf) > 0) {
-        nwritten = write(c->fd,c->obuf,sdslen(c->obuf));
+        nwritten = genericWrite(c,c->obuf,sdslen(c->obuf));
         if (nwritten == -1) {
             if ((errno == EAGAIN && !(c->flags & REDIS_BLOCK)) || (errno == EINTR)) {
                 /* Try again later */

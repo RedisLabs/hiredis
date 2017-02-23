@@ -4,10 +4,16 @@
 # This file is released under the BSD license, see the COPYING file
 
 OBJ=net.o hiredis.o sds.o async.o read.o
+OBJ_SSL=hiredis_ssl.o
 EXAMPLES=hiredis-example hiredis-example-libevent hiredis-example-libev hiredis-example-glib
+ifneq ($(USE_SSL),)
+EXAMPLES+=hiredis-example-ssl
+endif
 TESTS=hiredis-test
 LIBNAME=libhiredis
+LIBNAME_SSL=libhiredis_ssl
 PKGCONFNAME=hiredis.pc
+PKGCONFNAME_SSL=hiredis_ssl.pc
 
 HIREDIS_MAJOR=$(shell grep HIREDIS_MAJOR hiredis.h | awk '{print $$3}')
 HIREDIS_MINOR=$(shell grep HIREDIS_MINOR hiredis.h | awk '{print $$3}')
@@ -49,24 +55,36 @@ STLIBSUFFIX=a
 DYLIB_MINOR_NAME=$(LIBNAME).$(DYLIBSUFFIX).$(HIREDIS_SONAME)
 DYLIB_MAJOR_NAME=$(LIBNAME).$(DYLIBSUFFIX).$(HIREDIS_MAJOR)
 DYLIBNAME=$(LIBNAME).$(DYLIBSUFFIX)
-DYLIB_MAKE_CMD=$(CC) -shared -Wl,-soname,$(DYLIB_MINOR_NAME) -o $(DYLIBNAME) $(LDFLAGS)
+DYLIB_MAKE_CMD_PREFIX=$(CC) -shared -Wl,-soname,$(DYLIB_MINOR_NAME)
+DYLIB_MAKE_CMD_SUFFIX=$(LDFLAGS)
 STLIBNAME=$(LIBNAME).$(STLIBSUFFIX)
-STLIB_MAKE_CMD=ar rcs $(STLIBNAME)
+STLIB_MAKE_CMD=ar rcs
+
+DYLIB_MINOR_SSL_NAME=$(LIBNAME_SSL).$(DYLIBSUFFIX).$(HIREDIS_SONAME)
+DYLIB_MAJOR_SSL_NAME=$(LIBNAME_SSL).$(DYLIBSUFFIX).$(HIREDIS_MAJOR)
+DYLIBNAME_SSL=$(LIBNAME_SSL).$(DYLIBSUFFIX)
+STLIBNAME_SSL=$(LIBNAME_SSL).$(STLIBSUFFIX)
+
+ifneq ($(USE_SSL),)
+SSL_TARGETS=$(DYLIBNAME_SSL) $(STLIBNAME_SSL) $(PKGCONFNAME_SSL)
+endif
 
 # Platform-specific overrides
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')
 ifeq ($(uname_S),SunOS)
   REAL_LDFLAGS+= -ldl -lnsl -lsocket
-  DYLIB_MAKE_CMD=$(CC) -G -o $(DYLIBNAME) -h $(DYLIB_MINOR_NAME) $(LDFLAGS)
+  DYLIB_MAKE_CMD_PREFIX=$(CC) -G
+  DYLIB_MAKE_CMD_SUFFIX=-h $(DYLIB_MINOR_NAME) $(LDFLAGS)
   INSTALL= cp -r
 endif
 ifeq ($(uname_S),Darwin)
   DYLIBSUFFIX=dylib
   DYLIB_MINOR_NAME=$(LIBNAME).$(HIREDIS_SONAME).$(DYLIBSUFFIX)
-  DYLIB_MAKE_CMD=$(CC) -shared -Wl,-install_name,$(DYLIB_MINOR_NAME) -o $(DYLIBNAME) $(LDFLAGS)
+  DYLIB_MAKE_CMD_PREFIX=$(CC) -shared -Wl,-install_name,$(DYLIB_MINOR_NAME)
+  DYLIB_MAKE_CMD_SUFFIX=$(LDFLAGS)
 endif
 
-all: $(DYLIBNAME) $(STLIBNAME) hiredis-test $(PKGCONFNAME)
+all: $(DYLIBNAME) $(STLIBNAME) hiredis-test $(PKGCONFNAME) $(SSL_TARGETS)
 
 # Deps (use make dep to generate this)
 async.o: async.c fmacros.h async.h hiredis.h read.h sds.h net.h dict.c dict.h
@@ -76,15 +94,25 @@ net.o: net.c fmacros.h net.h hiredis.h read.h sds.h
 read.o: read.c fmacros.h read.h sds.h
 sds.o: sds.c sds.h
 test.o: test.c fmacros.h hiredis.h read.h sds.h
+hiredis_ssl.o: hiredis_ssl.c
 
 $(DYLIBNAME): $(OBJ)
-	$(DYLIB_MAKE_CMD) $(OBJ)
+	$(DYLIB_MAKE_CMD_PREFIX) -o $(DYLIBNAME) $(DYLIB_MAKE_CMD_SUFFIX) $(OBJ)
 
 $(STLIBNAME): $(OBJ)
-	$(STLIB_MAKE_CMD) $(OBJ)
+	$(STLIB_MAKE_CMD) $(STLIBNAME) $(OBJ)
 
 dynamic: $(DYLIBNAME)
 static: $(STLIBNAME)
+
+$(DYLIBNAME_SSL): $(OBJ_SSL)
+	$(DYLIB_MAKE_CMD_PREFIX) -o $(DYLIBNAME_SSL) $(DYLIB_MAKE_CMD_SUFFIX) $(OBJ_SSL)
+
+$(STLIBNAME_SSL): $(OBJ_SSL)
+	$(STLIB_MAKE_CMD) $(STLIBNAME_SSL) $(OBJ_SSL)
+
+dynamic_ssl: $(DYLIBNAME_SSL)
+static_ssl: $(STLIBNAME_SSL)
 
 # Binaries:
 hiredis-example-libevent: examples/example-libevent.c adapters/libevent.h $(STLIBNAME)
@@ -136,6 +164,9 @@ endif
 hiredis-example: examples/example.c $(STLIBNAME)
 	$(CC) -o examples/$@ $(REAL_CFLAGS) $(REAL_LDFLAGS) -I. $< $(STLIBNAME)
 
+hiredis-example-ssl: examples/example-ssl.c $(STLIBNAME) $(STLIBNAME_SSL)
+	$(CC) -o examples/$@ $(REAL_CFLAGS) $(REAL_LDFLAGS) -I. $< $(STLIBNAME) $(STLIBNAME_SSL) -lssl -lcrypto
+
 examples: $(EXAMPLES)
 
 hiredis-test: test.o $(STLIBNAME)
@@ -156,7 +187,7 @@ check: hiredis-test
 	$(CC) -std=c99 -pedantic -c $(REAL_CFLAGS) $<
 
 clean:
-	rm -rf $(DYLIBNAME) $(STLIBNAME) $(TESTS) $(PKGCONFNAME) examples/hiredis-example* *.o *.gcda *.gcno *.gcov
+	rm -rf $(DYLIBNAME) $(STLIBNAME) $(TESTS) $(PKGCONFNAME) examples/hiredis-example* *.o *.gcda *.gcno *.gcov $(SSL_TARGETS)
 
 dep:
 	$(CC) -MM *.c
@@ -180,7 +211,23 @@ $(PKGCONFNAME): hiredis.h
 	@echo Libs: -L\$${libdir} -lhiredis >> $@
 	@echo Cflags: -I\$${includedir} -D_FILE_OFFSET_BITS=64 >> $@
 
-install: $(DYLIBNAME) $(STLIBNAME) $(PKGCONFNAME)
+$(PKGCONFNAME_SSL): hiredis.h
+	@echo "Generating $@ for pkgconfig..."
+	@echo prefix=$(PREFIX) > $@
+	@echo exec_prefix=\$${prefix} >> $@
+	@echo libdir=$(PREFIX)/$(LIBRARY_PATH) >> $@
+	@echo includedir=$(PREFIX)/$(INCLUDE_PATH) >> $@
+	@echo >> $@
+	@echo Name: hiredis_ssl >> $@
+	@echo Description: SSL support for hiredis C client library. >> $@
+	@echo Requires: hiredis >> $@
+	@echo Version: $(HIREDIS_MAJOR).$(HIREDIS_MINOR).$(HIREDIS_PATCH) >> $@
+	@echo Libs: -L\$${libdir} -lhiredis_ssl >> $@
+	@echo Libs.private: lssl -lcrypto >> $@
+	@echo Cflags: -I\$${includedir} -D_FILE_OFFSET_BITS=64 >> $@
+
+
+install: $(DYLIBNAME) $(STLIBNAME) $(PKGCONFNAME) $(SSL_TARGETS)
 	mkdir -p $(INSTALL_INCLUDE_PATH) $(INSTALL_LIBRARY_PATH)
 	$(INSTALL) hiredis.h async.h read.h sds.h adapters $(INSTALL_INCLUDE_PATH)
 	$(INSTALL) $(DYLIBNAME) $(INSTALL_LIBRARY_PATH)/$(DYLIB_MINOR_NAME)
@@ -188,6 +235,12 @@ install: $(DYLIBNAME) $(STLIBNAME) $(PKGCONFNAME)
 	$(INSTALL) $(STLIBNAME) $(INSTALL_LIBRARY_PATH)
 	mkdir -p $(INSTALL_PKGCONF_PATH)
 	$(INSTALL) $(PKGCONFNAME) $(INSTALL_PKGCONF_PATH)
+ifneq ($(USE_SSL),)
+	$(INSTALL) $(DYLIBNAME_SSL) $(INSTALL_LIBRARY_PATH)/$(DYLIB_MINOR_SSL_NAME)
+	cd $(INSTALL_LIBRARY_PATH) && ln -sf $(DYLIB_MINOR_SSL_NAME) $(DYLIBNAME_SSL)
+	$(INSTALL) $(STLIBNAME_SSL) $(INSTALL_LIBRARY_PATH)
+	$(INSTALL) $(PKGCONFNAME_SSL) $(INSTALL_PKGCONF_PATH)
+endif
 
 32bit:
 	@echo ""

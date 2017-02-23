@@ -136,6 +136,10 @@ enum redisConnectionType {
     REDIS_CONN_UNIX,
 };
 
+struct redisSSLData;    /* Stores SSL information when used */
+struct redisContext;    /* Forward declaration */
+typedef ssize_t (*io_rw_func)(struct redisContext *redisCTX, void *buf, size_t count);
+
 /* Context for a connection to Redis */
 typedef struct redisContext {
     int err; /* Error flags, 0 when there is no error */
@@ -158,6 +162,10 @@ typedef struct redisContext {
         char *path;
     } unix_sock;
 
+    struct redisSSLData *ssl;
+    io_rw_func read_cb;
+    io_rw_func write_cb;
+    void (*free_cb)(struct redisContext*);
 } redisContext;
 
 redisContext *redisConnect(const char *ip, int port);
