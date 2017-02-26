@@ -67,6 +67,7 @@ STLIBNAME_SSL=$(LIBNAME_SSL).$(STLIBSUFFIX)
 
 ifneq ($(USE_SSL),)
 SSL_TARGETS=$(DYLIBNAME_SSL) $(STLIBNAME_SSL) $(PKGCONFNAME_SSL)
+HIREDIS_SSL_HEADER=hiredis_ssl.h
 endif
 
 # Platform-specific overrides
@@ -211,7 +212,7 @@ $(PKGCONFNAME): hiredis.h
 	@echo Libs: -L\$${libdir} -lhiredis >> $@
 	@echo Cflags: -I\$${includedir} -D_FILE_OFFSET_BITS=64 >> $@
 
-$(PKGCONFNAME_SSL): hiredis.h
+$(PKGCONFNAME_SSL): hiredis_ssl.h
 	@echo "Generating $@ for pkgconfig..."
 	@echo prefix=$(PREFIX) > $@
 	@echo exec_prefix=\$${prefix} >> $@
@@ -229,7 +230,7 @@ $(PKGCONFNAME_SSL): hiredis.h
 
 install: $(DYLIBNAME) $(STLIBNAME) $(PKGCONFNAME) $(SSL_TARGETS)
 	mkdir -p $(INSTALL_INCLUDE_PATH) $(INSTALL_LIBRARY_PATH)
-	$(INSTALL) hiredis.h async.h read.h sds.h adapters $(INSTALL_INCLUDE_PATH)
+	$(INSTALL) hiredis.h $(HIREDIS_SSL_HEADER) async.h read.h sds.h adapters $(INSTALL_INCLUDE_PATH)
 	$(INSTALL) $(DYLIBNAME) $(INSTALL_LIBRARY_PATH)/$(DYLIB_MINOR_NAME)
 	cd $(INSTALL_LIBRARY_PATH) && ln -sf $(DYLIB_MINOR_NAME) $(DYLIBNAME)
 	$(INSTALL) $(STLIBNAME) $(INSTALL_LIBRARY_PATH)
