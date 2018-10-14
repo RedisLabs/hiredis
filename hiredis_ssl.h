@@ -11,6 +11,6 @@ typedef struct redisSSLData {
     int owner;
 } redisSSLData;
 
-redisContext *redisConnectSSLWithTimeout(SSL_CTX *sslctx, int owner, const char *hostname, int port, int timeout);
+redisContext *redisConnectSSLWithTimeout(SSL_CTX *sslctx, int owner, const char *hostname, int port, int timeout, const char *sni);
 
 #endif

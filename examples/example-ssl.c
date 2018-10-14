@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
     // init globals of openssl and crypt
     ssl_globals_init();
     SSL_CTX *ssl_ctx = sslContextInit(keyfile, cert_file, caFile);
-    c = redisConnectSSLWithTimeout(ssl_ctx, 1, hostname, port, 2);
+    c = redisConnectSSLWithTimeout(ssl_ctx, 1, hostname, port, 2, NULL);
 
     if (c == NULL || c->err) {
         ERR_print_errors_fp (stderr);
