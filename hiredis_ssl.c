@@ -41,7 +41,7 @@ static inline ssize_t hiredis_ssl_read(redisContext *c, void *buf, size_t len) {
 }
 
 
-redisContext *redisConnectSSLWithTimeout(SSL_CTX *sslctx, int owner, const char *hostname, int port, int timeout) {
+redisContext *redisConnectSSLWithTimeout(SSL_CTX *sslctx, int owner, const char *hostname, int port, int timeout, const char *sni) {
     redisContext *c = redisContextInit();
     c->read_cb = hiredis_ssl_read;
     c->write_cb = hiredis_ssl_write;
@@ -62,6 +62,11 @@ redisContext *redisConnectSSLWithTimeout(SSL_CTX *sslctx, int owner, const char 
     c->ssl->bio = BIO_new_ssl_connect(c->ssl->ctx);
     if (c->ssl->bio == NULL)
         goto err;
+    SSL *ssl = NULL;
+    BIO_get_ssl(c->ssl->bio, &ssl);
+    if (sni && SSL_set_tlsext_host_name(ssl, sni) <= 0) {
+        goto err;
+    }
     if (BIO_set_conn_hostname(c->ssl->bio, address) != 1) {
         goto err;
     }
