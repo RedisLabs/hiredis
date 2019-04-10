@@ -133,6 +133,8 @@ struct redisSsl;
  */
 #define REDIS_OPT_NOAUTOFREE 0x04
 
+#define REDIS_INVALID_FD -1
+
 typedef struct {
     /*
      * the type of connection to use. This also indicates which
