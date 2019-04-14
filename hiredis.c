@@ -687,9 +687,6 @@ redisContext *redisConnectWithOptions(const redisOptions *options) {
         // Unknown type - FIXME - FREE
         return NULL;
     }
-    if (options->timeout != NULL && (c->flags & REDIS_BLOCK) && c->fd != REDIS_INVALID_FD) {
-        redisContextSetTimeout(c, *options->timeout);
-    }
     return c;
 }
 
