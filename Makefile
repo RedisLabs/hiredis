@@ -92,7 +92,7 @@ hiredis.o: hiredis.c fmacros.h hiredis.h read.h sds.h net.h sslio.h alloc.h
 net.o: net.c fmacros.h net.h hiredis.h read.h sds.h alloc.h 
 read.o: read.c fmacros.h read.h sds.h
 sds.o: sds.c sds.h sdsalloc.h
-sslio.o: sslio.c sslio.h hiredis.h
+sslio.o: sslio.c sslio.h hiredis.h alloc.h
 test.o: test.c fmacros.h hiredis.h read.h sds.h alloc.h net.h
 
 $(DYLIBNAME): $(OBJ)

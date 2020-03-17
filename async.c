@@ -853,7 +853,7 @@ int redisAsyncFormattedCommand(redisAsyncContext *ac, redisCallbackFn *fn, void 
 
 void redisAsyncSetTimeout(redisAsyncContext *ac, struct timeval tv) {
     if (!ac->c.timeout) {
-        ac->c.timeout = calloc(1, sizeof(tv));
+        ac->c.timeout = hi_calloc(1, sizeof(tv));
     }
 
     if (tv.tv_sec == ac->c.timeout->tv_sec &&

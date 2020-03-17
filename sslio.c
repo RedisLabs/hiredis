@@ -70,7 +70,7 @@ static void initOpensslLocks(void) {
         return;
     }
     nlocks = CRYPTO_num_locks();
-    ossl_locks = malloc(sizeof(*ossl_locks) * nlocks);
+    ossl_locks = hi_malloc(sizeof(*ossl_locks) * nlocks);
     for (ii = 0; ii < nlocks; ii++) {
         sslLockInit(ossl_locks + ii);
     }
@@ -90,7 +90,7 @@ void redisFreeSsl(redisSsl *ssl){
 int redisSslCreate(redisContext *c, const char *capath, const char *certpath,
                    const char *keypath, const char *servername) {
     assert(!c->ssl);
-    c->ssl = calloc(1, sizeof(*c->ssl));
+    c->ssl = hi_calloc(1, sizeof(*c->ssl));
     static int isInit = 0;
     if (!isInit) {
         isInit = 1;

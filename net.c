@@ -404,7 +404,7 @@ addrretry:
         if (c->saddr) {
             free(c->saddr);
         }
-        c->saddr = malloc(p->ai_addrlen);
+        c->saddr = hi_malloc(p->ai_addrlen);
         memcpy(c->saddr, p->ai_addr, p->ai_addrlen);
         c->addrlen = p->ai_addrlen;
 
@@ -499,7 +499,7 @@ int redisContextConnectUnix(redisContext *c, const char *path, const struct time
     if (redisContextTimeoutMsec(c,&timeout_msec) != REDIS_OK)
         return REDIS_ERR;
 
-    sa = (struct sockaddr_un*)(c->saddr = malloc(sizeof(struct sockaddr_un)));
+    sa = (struct sockaddr_un*)(c->saddr = hi_malloc(sizeof(struct sockaddr_un)));
     sa->sun_family = AF_UNIX;
     c->addrlen = sizeof(*sa);
     strncpy(sa->sun_path, path, sizeof(sa->sun_path) - 1);
