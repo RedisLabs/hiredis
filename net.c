@@ -313,13 +313,13 @@ static int _redisContextConnectTcp(redisContext *c, const char *addr, int port,
     if (c->tcp.host != addr) {
         free(c->tcp.host);
 
-        c->tcp.host = strdup(addr);
+        c->tcp.host = hi_strdup(addr);
     }
 
     if (timeout) {
         if (c->timeout != timeout) {
             if (c->timeout == NULL)
-                c->timeout = malloc(sizeof(struct timeval));
+                c->timeout = hi_malloc(sizeof(struct timeval));
 
             memcpy(c->timeout, timeout, sizeof(struct timeval));
         }
@@ -338,7 +338,7 @@ static int _redisContextConnectTcp(redisContext *c, const char *addr, int port,
         c->tcp.source_addr = NULL;
     } else if (c->tcp.source_addr != source_addr) {
         free(c->tcp.source_addr);
-        c->tcp.source_addr = strdup(source_addr);
+        c->tcp.source_addr = hi_strdup(source_addr);
     }
 
     snprintf(_port, 6, "%d", port);
@@ -404,7 +404,7 @@ addrretry:
         if (c->saddr) {
             free(c->saddr);
         }
-        c->saddr = malloc(p->ai_addrlen);
+        c->saddr = hi_malloc(p->ai_addrlen);
         memcpy(c->saddr, p->ai_addr, p->ai_addrlen);
         c->addrlen = p->ai_addrlen;
 
@@ -482,12 +482,12 @@ int redisContextConnectUnix(redisContext *c, const char *path, const struct time
 
     c->connection_type = REDIS_CONN_UNIX;
     if (c->unix_sock.path != path)
-        c->unix_sock.path = strdup(path);
+        c->unix_sock.path = hi_strdup(path);
 
     if (timeout) {
         if (c->timeout != timeout) {
             if (c->timeout == NULL)
-                c->timeout = malloc(sizeof(struct timeval));
+                c->timeout = hi_malloc(sizeof(struct timeval));
 
             memcpy(c->timeout, timeout, sizeof(struct timeval));
         }
@@ -499,7 +499,7 @@ int redisContextConnectUnix(redisContext *c, const char *path, const struct time
     if (redisContextTimeoutMsec(c,&timeout_msec) != REDIS_OK)
         return REDIS_ERR;
 
-    sa = (struct sockaddr_un*)(c->saddr = malloc(sizeof(struct sockaddr_un)));
+    sa = (struct sockaddr_un*)(c->saddr = hi_malloc(sizeof(struct sockaddr_un)));
     sa->sun_family = AF_UNIX;
     c->addrlen = sizeof(*sa);
     strncpy(sa->sun_path, path, sizeof(sa->sun_path) - 1);

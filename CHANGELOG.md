@@ -1,6 +1,4 @@
-### 1.0.0 (unreleased)
-
-**BREAKING CHANGES**:
+**NOTE: BREAKING CHANGES upgrading from 0.13.x to 0.14.x **:
 
 * Bulk and multi-bulk lengths less than -1 or greater than `LLONG_MAX` are now
   protocol errors. This is consistent with the RESP specification. On 32-bit
@@ -11,6 +9,10 @@
   User code should compare this to `size_t` values as well.  If it was used to
   compare to other values, casting might be necessary or can be removed, if
   casting was applied before.
+
+### 0.14.1 (2020-03-13)
+
+* Adds safe allocation wrappers (CVE-2020-7105, #747, #752) (Michael Grunder)
 
 ### 0.14.0 (2018-09-25)
 
